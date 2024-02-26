@@ -1,179 +1,122 @@
 <!DOCTYPE html>
 <html lang="en-us">
-
-<head>
-  <meta charset="utf-8">
-  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-  <title>ШТРАФНЫЕ</title>
-  <link rel="shortcut icon" href="TemplateData/faviconball.ico">
-  <link rel="stylesheet" href="TemplateData/style.css">
-  <script type="text/javascript" src="appconf.js?v=8"></script>
-</head>
-
-<body>
- 
-
-  <script>
-    function StartButtonClicked(unityInstance) {
-      var ucontainer = document.querySelector("#unity-container");
-      ucontainer.style.visibility = "visible";
-
-      var container = document.getElementsByClassName("container")[0];
-      container.style.visibility = "hidden";
-      container.style.display = "none";
-
-      var parent = document.getElementsByClassName("parent")[0];
-      parent.style.visibility = "hidden";
-      parent.style.display = "none";
-
-      document.getElementById('start-button').style.visibility = "hidden";
-      unityInstance.SendMessage('LoadingScreenCloseWaiter', 'ScreenClosed');
-    }
-  </script>
-
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <div id="rotate_screen_alert">
-    <div id="alert_text">ДЛЯ ИГРЫ НЕОБХОДИМО РАЗВЕРНУТЬ УСТРОЙСТВО ВЕРТИКАЛЬНО...</div>
-  </div>
-  <div class="parent">
-    <img class="player-image" loading="eager" src="./TemplateData/rules-player.png" style="" />
-    <img id="logotop" class="toplogos" loading="eager" src="./TemplateData/logos.png" style="visibility: hidden;" />
-    <img class="title-words" loading="eager" src="./TemplateData/titlewords.png" style="" />
-    <img id="start-button" loading="eager" src="./TemplateData/rules-button.png" />
-    <div id="rulestext-top">
-    </div>
-    <div id="unity-loading-bar" style="z-index: 1000000;">
-      <div class="unity-waiter">Игра загружается...</div>
-      <div id="unity-progress-bar-empty">
-        <div id="unity-progress-bar-full"></div>
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <title>Unity WebGL Player | FreeKicks</title>
+    <link rel="shortcut icon" href="TemplateData/favicon.ico">
+    <link rel="stylesheet" href="TemplateData/style.css">
+  </head>
+  <body>
+    <div id="unity-container" class="unity-desktop">
+      <canvas id="unity-canvas" width=600 height=960 tabindex="-1"></canvas>
+      <div id="unity-loading-bar">
+        <div id="unity-logo"></div>
+        <div id="unity-progress-bar-empty">
+          <div id="unity-progress-bar-full"></div>
+        </div>
+      </div>
+      <div id="unity-warning"> </div>
+      <div id="unity-footer">
+        <div id="unity-webgl-logo"></div>
+        <div id="unity-fullscreen-button"></div>
+        <div id="unity-build-title">FreeKicks</div>
       </div>
     </div>
-    <div id="rulestext-bot">
-      Правил в этой игре нет, но следи за подсказками, чтобы пробивать точно.
-    </div>
-  </div>
+    <script>
 
-  <div class="container">
-    <img loading="eager" src="./TemplateData/rules-low.jpg" />
-  </div>
+      var container = document.querySelector("#unity-container");
+      var canvas = document.querySelector("#unity-canvas");
+      var loadingBar = document.querySelector("#unity-loading-bar");
+      var progressBarFull = document.querySelector("#unity-progress-bar-full");
+      var fullscreenButton = document.querySelector("#unity-fullscreen-button");
+      var warningBanner = document.querySelector("#unity-warning");
 
-  <div id="unity-container" class="unity-desktop" data-value="0">
-    <canvas id="unity-canvas" class="unity-desktop" style="background-color: white;"></canvas>
-
-  </div>
-
-
-  <script>
-    readConfig();
-
-    var buildUrl = "Build";
-    var loaderUrl = buildUrl + "/FON_Build.loader.js";
-    var config = {
-      dataUrl: buildUrl + "/FON_Build.data",
-      frameworkUrl: buildUrl + "/FON_Build.framework.js",
-      codeUrl: buildUrl + "/FON_Build.wasm",
-      streamingAssetsUrl: "StreamingAssets",
-      companyName: "DefaultCompany",
-      productName: "WEBGL_Test",
-      productVersion: "0.1",
-    };
-
-    var container = document.querySelector("#unity-container");
-    var canvas = document.querySelector("#unity-canvas");
-    var loadingBar = document.querySelector("#unity-loading-bar");
-    var progressBarFull = document.querySelector("#unity-progress-bar-full");
-    var mobileWarning = document.querySelector("#unity-mobile-warning");
-
-    document.getElementById('rotate_screen_alert').style.visibility = "hidden";
-
-    var scaleToFit = true;
-
-
-    function onResizeMobile() {
-      var container = canvas.parentElement;
-      var w;
-      var h;
-
-      w = window.innerWidth;
-      h = window.innerHeight;
-
-      if (w > h) {
-        document.getElementById('rotate_screen_alert').style.visibility = "visible";
-      }
-      else {
-        document.getElementById('rotate_screen_alert').style.visibility = "hidden";
-      }
-
-      console.log("Resize: " + w + " " + h);
-    }
-
-    function onResize() {
-      var container = canvas.parentElement;
-      var w;
-      var h;
-
-      if (scaleToFit) {
-        w = window.innerWidth;
-        h = window.innerHeight;
-
-        var r = 960 / 600;
-
-        if (w * r > window.innerHeight) {
-          w = Math.min(w, Math.ceil(h / r));
+      // Shows a temporary message banner/ribbon for a few seconds, or
+      // a permanent error message on top of the canvas if type=='error'.
+      // If type=='warning', a yellow highlight color is used.
+      // Modify or remove this function to customize the visually presented
+      // way that non-critical warnings and error messages are presented to the
+      // user.
+      function unityShowBanner(msg, type) {
+        function updateBannerVisibility() {
+          warningBanner.style.display = warningBanner.children.length ? 'block' : 'none';
         }
-        h = Math.floor(w * r);
-      } else {
-        w = 600;
-        h = 960;
+        var div = document.createElement('div');
+        div.innerHTML = msg;
+        warningBanner.appendChild(div);
+        if (type == 'error') div.style = 'background: red; padding: 10px;';
+        else {
+          if (type == 'warning') div.style = 'background: yellow; padding: 10px;';
+          setTimeout(function() {
+            warningBanner.removeChild(div);
+            updateBannerVisibility();
+          }, 5000);
+        }
+        updateBannerVisibility();
       }
 
-      container.style.width = canvas.style.width = w + "px";
-      container.style.height = canvas.style.height = h + "px";
-      container.style.top = Math.floor((window.innerHeight - h) / 2) + "px";
-      container.style.left = Math.floor((window.innerWidth - w) / 2) + "px";
-    }
+      var buildUrl = "Build";
+      var loaderUrl = buildUrl + "/Builds.loader.js";
+      var config = {
+        dataUrl: buildUrl + "/Builds.data.unityweb",
+        frameworkUrl: buildUrl + "/Builds.framework.js.unityweb",
+        codeUrl: buildUrl + "/Builds.wasm.unityweb",
+        streamingAssetsUrl: "StreamingAssets",
+        companyName: "FON",
+        productName: "FreeKicks",
+        productVersion: "1.0",
+        showBanner: unityShowBanner,
+      };
+
+      // By default, Unity keeps WebGL canvas render target size matched with
+      // the DOM size of the canvas element (scaled by window.devicePixelRatio)
+      // Set this to false if you want to decouple this synchronization from
+      // happening inside the engine, and you would instead like to size up
+      // the canvas DOM size and WebGL render target sizes yourself.
+      // config.matchWebGLToCanvasSize = false;
+
+      if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
+        // Mobile device style: fill the whole browser client area with the game canvas:
+
+        var meta = document.createElement('meta');
+        meta.name = 'viewport';
+        meta.content = 'width=device-width, height=device-height, initial-scale=1.0, user-scalable=no, shrink-to-fit=yes';
+        document.getElementsByTagName('head')[0].appendChild(meta);
+        container.className = "unity-mobile";
+        canvas.className = "unity-mobile";
+
+        // To lower canvas resolution on mobile devices to gain some
+        // performance, uncomment the following line:
+        // config.devicePixelRatio = 1;
 
 
-    if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
+      } else {
+        // Desktop style: Render the game canvas in a window that can be maximized to fullscreen:
 
-      var meta = document.createElement('meta');
-      meta.name = 'viewport';
-      meta.content = 'width=device-width, height=device-height, initial-scale=1.0, user-scalable=no, shrink-to-fit=yes';
-      document.getElementsByTagName('head')[0].appendChild(meta);
-      container.className = "unity-mobile";
-      canvas.className = "unity-mobile";
-      window.addEventListener('resize', onResizeMobile);
+        canvas.style.width = "600px";
+        canvas.style.height = "960px";
+      }
 
-      onResizeMobile();
+      loadingBar.style.display = "block";
 
-    } else {
-      canvas.style.width = "600px";
-      canvas.style.height = "960px";
+      var script = document.createElement("script");
+      script.src = loaderUrl;
+      script.onload = () => {
+        createUnityInstance(canvas, config, (progress) => {
+          progressBarFull.style.width = 100 * progress + "%";
+              }).then((unityInstance) => {
+                loadingBar.style.display = "none";
+                fullscreenButton.onclick = () => {
+                  unityInstance.SetFullscreen(1);
+                };
+              }).catch((message) => {
+                alert(message);
+              });
+            };
 
-      window.addEventListener('resize', onResize);
-      onResize();
-    }
+      document.body.appendChild(script);
 
-    document.getElementById('start-button').style.visibility = "hidden";
-    loadingBar.style.display = "block";
-    container.style.display = "block";
-    container.style.visibility = "hidden";
-
-    var script = document.createElement("script");
-    script.src = loaderUrl;
-    script.onload = () => {
-      createUnityInstance(canvas, config, (progress) => {
-        progressBarFull.style.width = 100 * progress + "%";
-      }).then((unityInstance) => {
-        document.getElementById('start-button').onclick = () => {
-          ym(95526259, 'reachGoal', 'activity-igrat-pervyj-ehkran');
-          StartButtonClicked(unityInstance);
-        };
-      }).catch((message) => {
-        alert(message);
-      });
-    };
-    document.body.appendChild(script);
-  </script>
-</body>
+    </script>
+  </body>
 </html>
